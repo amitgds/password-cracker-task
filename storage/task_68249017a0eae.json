@@ -1,0 +1,1 @@
+{"status":"failed","progress":0,"error":"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '7275f16c28f6ab9f778f0b451a7244e2' for key 'temp_uppercase_hashes.PRIMARY'"}

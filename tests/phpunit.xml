@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.0/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true">
+    <testsuites>
+        <testsuite name="PasswordCracker Test Suite">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
+</phpunit>
+
+### Setup Instructions
+1. **Replace composer.json**:
+   - Replace the existing `/composer.json` with the provided version.
+   - Ensure it’s in the project root (`/password-cracker`).
+
+2. **Install Dependencies**:
+   - Run `composer install` to fetch dependencies and generate the autoloader.
+
+3. **Update Dockerfile (if needed)**:
+   - The existing `Dockerfile` already includes Composer installation and runs `composer install`. No changes are needed unless you add new extensions.
+
+4. **Verify Namespace**:
+   - Confirm that all PHP files in `/src` use the `PasswordCracker\` namespace, which they already do based on the provided code.
+
+5. **Run Scripts**:
+   - For testing: `composer test` (after setting up tests).
+   - For static analysis: `composer analyze`.
+
+### Notes
+- **Namespace**: If you prefer a different namespace (e.g., `Admin\NewCracker`), update all PHP files in `/src` and the `composer.json` autoload section accordingly.
+- **License**: The MIT license is assumed; change to your preferred license if needed.
+- **Testing**: The `tests/` directory and `phpunit.xml` are optional. If you don’t plan to write tests, you can remove `phpunit/phpunit` from `require-dev`.
+- **Secrets Manager**: The salt (`ThisIs-A-Salt123`) is still hardcoded in `AwsConfig.php` as per the original requirement. In a real production environment, store it in AWS Secrets Manager and update `AwsConfig::getSalt()` to fetch it dynamically.
+
+This revised `composer.json` ensures compatibility with the project, enhances production-readiness, and supports development workflows like testing and static analysis. Let me know if you need further adjustments or help setting up tests!
