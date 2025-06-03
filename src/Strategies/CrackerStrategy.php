@@ -1,7 +1,7 @@
 <?php
-namespace PasswordCracker\Strategies;
+
+namespace Admin\NewCracker\Strategies;
 
 interface CrackerStrategy {
-    public function crack(array $passwords, string $salt): array;
+    public function crack(): array;
 }
-?>

@@ -1,23 +1,31 @@
 <?php
-namespace PasswordCracker\Strategies;
 
-class NumbersCracker implements CrackerStrategy {
-    public function crack(array $passwords, string $salt): array {
+namespace Admin\NewCracker\Strategies;
+
+use Admin\NewCracker\Core\Database;
+use Admin\NewCracker\Core\Logger;
+use Admin\NewCracker\Core\Config;
+
+class NumbersCracker extends BaseCracker {
+    public function __construct(Database $database, Logger $logger, Config $config) {
+        parent::__construct($database, $logger, $config);
+    }
+
+    public function crack(): array {
         $results = [];
-        for ($i = 10000; $i <= 99999; $i++) {
-            $test = str_pad($i, 5, '0', STR_PAD_LEFT);
-            $hash = md5($test . $salt);
-            foreach ($passwords as $row) {
-                if ($row['password'] === $hash) {
-                    $results[] = [
-                        'user_id' => $row['user_id'],
-                        'password' => $test,
-                        'type' => 'Easy (Numbers)'
-                    ];
-                }
+        $numbers = CombinationGenerator::generateNumbers(5);
+
+        foreach ($numbers as $number) {
+            $hash = $this->hashPassword($number);
+            $users = $this->database->query(
+                "SELECT user_id FROM not_so_smart_users WHERE password = ?",
+                [$hash]
+            );
+
+            foreach ($users as $user) {
+                $results[$user['user_id']] = $number;
             }
         }
         return $results;
     }
 }
-?>

@@ -1,8 +1,10 @@
 {
-    "name": "password-cracker/password-cracker",
-    "description": "A secure and modular password cracking tool for educational purposes",
-    "type": "project",
-    "license": "MIT",
+    "name": "admin/password-cracker",
+    "autoload": {
+        "psr-4": {
+            "Admin\\NewCracker\\": "src/"
+        }
+    },
     "authors": [
         {
             "name": "Kaushal",
@@ -10,32 +12,12 @@
         }
     ],
     "require": {
-        "php": "^8.2",
-        "aws/aws-sdk-php": "^3.209.0",
-        "monolog/monolog": "^3.9"
+        "php": ">=8.1",
+        "monolog/monolog": "^3.9",
+        "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
-        "phpstan/phpstan": "^1.12",
-        "phpunit/phpunit": "^11.5"
-    },
-    "autoload": {
-        "psr-4": {
-            "PasswordCracker\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "PasswordCracker\\Tests\\": "tests/"
-        }
-    },
-    "minimum-stability": "stable",
-    "prefer-stable": true,
-    "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true
-    },
-    "scripts": {
-        "test": "phpunit --configuration phpunit.xml",
-        "analyze": "phpstan analyze"
+        "phpunit/phpunit": "^12.1",
+        "phpstan/phpstan": "^2.1"
     }
 }

@@ -25,7 +25,7 @@ bbbbbb
 ABC1
 london
 donkey
-AbC12z
+
 apple
 banana
 cherry
@@ -123,3 +123,14 @@ michael
 
 dolphin
 penguin
+tokyo 
+rome 
+milan
+monkey
+hello
+dragon
+london
+secret
+hunter
+shadow
+guitar
