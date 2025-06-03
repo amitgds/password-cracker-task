@@ -1,233 +1,258 @@
-# Password Cracker
+# Password Cracker Application
 
-Password Cracker is a PHP-based application designed to identify weak passwords by matching hashed user passwords against a database of known password hashes. It leverages a MySQL database for data storage, Monolog for logging, and PHPUnit for testing. The project runs in a Windows WAMP environment and is optimized for performance with indexed database queries.
+## Overview
+This is a password cracker application designed to crack hashed passwords using various strategies: numbers-only, uppercase with numbers, dictionary-based, and a combination for harder passwords. The application is built with PHP, JavaScript, and MySQL, and is intended to run in a Docker environment.
 
-## Purpose
-The application simulates password cracking by comparing MD5-hashed passwords from a user table (`not_so_smart_users`) against a precomputed hash table (`password_hashes`). It categorizes passwords as `Easy (Numbers)`, `Medium (Uppercase + Number)`, `Medium (Lowercase)`, or `Hard (Mixed)` and logs cracking results for analysis.
+- **Easy**: Cracks numbers-only passwords (5 digits).
+- **Medium**: Cracks uppercase + number passwords (e.g., EII9) and dictionary-based passwords (e.g., london).
+- **Hard**: Cracks all passwords, including mixed patterns (e.g., AbC12z).
 
-## Features
-- **Hash Generation**: Creates MD5 hashes using a configurable salt (`ThisIs-A-Salt123`).
-- **Password Cracking**: Matches user hashes against known hashes for specified categories (`easy`, `medium`, `hard`).
-- **Database Integration**: Uses MySQL (`cracker_test`) with indexed tables for efficient queries.
-- **Logging**: Records database operations and cracking results via Monolog.
-- **Testing**: Includes unit tests to ensure reliability and performance.
-- **Performance**: Optimized for large datasets with SQL JOINs and indexes.
-
-## Requirements
-- **PHP**: 8.3.6 or higher
-- **MySQL**: 5.7 or higher
-- **WAMP**: Configured at `D:\wamp64`
-- **Composer**: For dependency management
-- **Dependencies** (via `composer.json`):
-  - `monolog/monolog`: Logging
-  - `phpunit/phpunit`: Testing (11.5.20)
-
-## Installation
-
-1. **Clone the Repository**:
-   ```bash
-   git clone <repository-url> D:\wamp64\www\password-cracker
-   cd D:\wamp64\www\password-cracker
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   composer install
-   ```
-
-3. **Set Up MySQL Database**:
-   - Open phpMyAdmin (`http://localhost/phpmyadmin`).
-   - Create database:
-     ```sql
-     CREATE DATABASE cracker_test;
-     ```
-   - Create tables:
-     ```sql
-     CREATE TABLE not_so_smart_users (
-         user_id INT PRIMARY KEY,
-         password VARCHAR(32) NOT NULL
-     );
-     CREATE TABLE password_hashes (
-         password VARCHAR(255) NOT NULL,
-         hash VARCHAR(32) NOT NULL,
-         type VARCHAR(50) NOT NULL
-     );
-     ```
-   - Add indexes:
-     ```sql
-     ALTER TABLE password_hashes ADD INDEX idx_hash (hash);
-     ALTER TABLE not_so_smart_users ADD INDEX idx_password (password);
-     ```
-
-4. **Configure Logging**:
-   - Ensure `logs` directory is writable:
-     ```bash
-     icacls D:\wamp64\www\password-cracker\logs /grant Everyone:F
-     ```
-
-5. **Verify WAMP**:
-   - Confirm Apache and MySQL are running via WAMP.
-   - Place project in `D:\wamp64\www\password-cracker`.
-
-## Project Structure
+## Directory Structure
 ```
-password-cracker/
-├── src/
-│   └── Services/
-│       ├── CrackerService.php  # Core cracking logic
-│       ├── DatabaseService.php # Database operations
-│       └── AwsConfig.php      # Configuration (salt)
-├── tests/
-│   └── CrackerServiceTest.php # Unit tests
+new-cracker/
+├── config/
+│   └── .env              # Environment variables
+├── data/
+│   ├── dictionary.txt    # Dictionary words for cracking
+│   └── init.sql          # Database initialization script
 ├── logs/
-│   └── test.log              # Log file
-├── vendor/                   # Composer dependencies
-├── composer.json             # Dependency configuration
-└── README.md                 # Project documentation
+│   ├── password_cracker.log  # Application logs
+│   └── php_error.log         # PHP error logs
+├── public/
+│   ├── index.php         # Main entry point
+│   ├── app.js            # Front-end JavaScript
+│   └── styles.css        # CSS styles
+├── scripts/
+│   └── import_database.php  # Script to import database
+├── src/
+│   ├── autoload.php      # Autoloader for PHP classes
+│   ├── Api/
+│   │   └── PasswordCrackerApi.php
+│   ├── Core/
+│   │   ├── Database.php
+│   │   ├── Logger.php
+│   │   └── Config.php
+│   └── Strategies/
+│       ├── BaseCracker.php
+│       ├── NumbersCracker.php
+│       ├── UppercaseNumberCracker.php
+│       ├── DictionaryCracker.php
+│       └── HardCracker.php
+├── Dockerfile            # Docker configuration
+├── docker-compose.yml    # Docker Compose configuration
+└── README.md             # Project documentation
 ```
+
+## Prerequisites
+
+### For Docker Setup
+- Docker and Docker Compose installed on your system.
+- Windows: Ensure WSL2 is enabled for better Docker performance.
+- Basic understanding of Docker commands.
+
+## Setup Instructions
+
+### Docker Setup
+1. **Clone or Place the Project**:
+   - Place the `new-cracker` folder in your desired directory (e.g., `/path/to/new-cracker`).
+
+2. **Configure Environment Variables**:
+   - Ensure the `config/.env` file exists with the following content:
+     ```
+     DB_HOST=db
+     DB_NAME=password_cracker
+     DB_USER=root
+     DB_PASS=rootpassword
+     LOG_FILE=/var/www/html/logs/password_cracker.log
+     DICTIONARY_FILE=/var/www/html/data/dictionary.txt
+     PASSWORD_SALT=ThisIs-A-Salt123
+     ```
+   - Note: `DB_HOST` is set to `db` (the service name in `docker-compose.yml`), and `DB_PASS` is set to `rootpassword` for the MySQL container.
+
+3. **Create a `Dockerfile`**:
+   - In the `new-cracker` directory, create a `Dockerfile` with the following content:
+     ```
+     FROM php:8.1-apache
+
+     # Install PDO MySQL extension
+     RUN docker-php-ext-install pdo_mysql
+
+     # Copy application files
+     COPY . /var/www/html/
+
+     # Set working directory
+     WORKDIR /var/www/html
+
+     # Set permissions for logs directory
+     RUN chown -R www-data:www-data /var/www/html/logs \
+         && chmod -R 775 /var/www/html/logs
+
+     # Enable Apache rewrite module
+     RUN a2enmod rewrite
+
+     # Expose port 80
+     EXPOSE 80
+     ```
+
+4. **Create a `docker-compose.yml`**:
+   - In the `new-cracker` directory, create a `docker-compose.yml` with the following content:
+     ```
+     version: '3.8'
+
+     services:
+       app:
+         build:
+           context: .
+           dockerfile: Dockerfile
+         ports:
+           - "8080:80"
+         volumes:
+           - .:/var/www/html
+         depends_on:
+           - db
+         networks:
+           - app-network
+
+       db:
+         image: mysql:8.0
+         environment:
+           MYSQL_ROOT_PASSWORD: rootpassword
+           MYSQL_DATABASE: password_cracker
+         volumes:
+           - db-data:/var/lib/mysql
+           - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
+         networks:
+           - app-network
+
+     networks:
+       app-network:
+         driver: bridge
+
+     volumes:
+       db-data:
+     ```
+
+5. **Import the Database**:
+   - Run the following command to import the database using the provided script:
+     ```bash
+     php scripts/import_database.php --host=localhost --user=root --password='rootpassword' --database=password_cracker --file='data/init.sql'
+     ```
+   - This script initializes the MySQL database with the schema and data from `data/init.sql`.
+
+6. **Build and Run the Docker Containers**:
+   - Navigate to the `new-cracker` directory:
+     ```bash
+     cd /path/to/new-cracker
+     ```
+   - Build and start the containers:
+     ```bash
+     docker-compose up -d --build
+     ```
+   - This will:
+     - Build the PHP-Apache container (`app`).
+     - Start a MySQL container (`db`) and initialize the database using `data/init.sql`.
+     - Map port `8080` on your host to port `80` in the container.
+
+7. **Verify the Containers**:
+   - Check that the containers are running:
+     ```bash
+     docker-compose ps
+     ```
+     - You should see `new-cracker-app-1` and `new-cracker-db-1` in the `Up` state.
+
+## Usage
+1. **Access the Application**:
+   - Open your browser and navigate to `http://localhost:8080/public/`.
+   - You should see the Password Cracker interface with three buttons: "Crack Easy," "Crack Medium," and "Crack Hard."
+
+2. **Crack Passwords**:
+   - Click each button to crack passwords:
+     - **Crack Easy**: Cracks numbers-only passwords.
+     - **Crack Medium**: Cracks uppercase + number and dictionary-based passwords.
+     - **Crack Hard**: Cracks all passwords, including mixed patterns.
+
+## Expected Results
+- **Easy**: 4 user IDs (e.g., `1: 22886`, `2: 52148`, `3: 75192`, `4: 98231`).
+- **Medium**: 16 user IDs:
+  - 4 uppercase + number (e.g., `5: EII9`, `6: XCN2`, `7: WKE5`, `8: PKL8`).
+  - 12 dictionary-based (e.g., `9: london`, ..., `19: monkey`, `20: hello`, `23: monkey`).
+- **Hard**: 20 user IDs (all of the above plus `21: AbC12z`, `22: XyZ89a`).
+
+## Troubleshooting
+- **Buttons Not Clickable**:
+  - Open the browser Console (F12 > Console) and check for errors.
+  - Ensure `public/app.js` and `public/styles.css` are loading (Network tab).
+- **"Unexpected token '<'" Error**:
+  - Check the Network tab for the response to `/public/index.php?action=<action>`.
+  - If the response isn’t pure JSON, there might be PHP errors. Check the container logs:
+    ```bash
+    docker-compose logs app
+    ```
+  - Verify `logs/php_error.log` inside the container for PHP errors.
+- **Database Connection Issues**:
+  - Ensure the MySQL container is running and the database is initialized:
+    ```bash
+    docker-compose logs db
+    ```
+  - Verify the credentials in `config/.env` match the `docker-compose.yml` settings.
+  - Confirm the database was imported correctly using the `import_database.php` script.
+- **MySQL Deprecation Warning**:
+  - If you see a warning about `mysql_native_password`, update the MySQL user:
+    ```bash
+    docker exec -it new-cracker-db-1 mysql -uroot -prootpassword
+    ```
+    ```sql
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH 'caching_sha2_password' BY 'rootpassword';
+    FLUSH PRIVILEGES;
+    EXIT;
+    ```
+  - Restart the containers:
+    ```bash
+    docker-compose down
+    docker-compose up -d
+    ```
+
+## Notes
+- The application logs are written to `logs/password_cracker.log`.
+- PHP errors are logged to `logs/php_error.log`.
+- The database data is persisted in a Docker volume (`db-data`).
+
+# Password Cracker AWS Infrastructure
+
+This Terraform project provisions AWS infrastructure for a password-cracker application using EC2, RDS, and Docker.
+
+## What It Creates
+
+- A VPC with public and private subnets
+- An EC2 instance (Docker-enabled) for the app
+- A MySQL RDS instance in a private subnet
+- Security groups and networking setup
+- Auto-deployment from a GitHub repo (update URL in `main.tf`)
 
 ## Usage
 
-### Cracking Passwords
-1. **Prepare Data**:
-   - Populate `not_so_smart_users` with user IDs and hashed passwords.
-   - Populate `password_hashes` with known passwords, their hashes, and types (e.g., `Easy (Numbers)`).
-   Example:
-   ```sql
-   INSERT INTO not_so_smart_users (user_id, password) VALUES
-       (2995, '776081a98bebdeba0f3cf05c3be6d47c'); -- EII9
-   INSERT INTO password_hashes (password, hash, type) VALUES
-       ('EII9', '776081a98bebdeba0f3cf05c3be6d47c', 'Medium (Uppercase + Number)');
-   ```
-
-2. **Run CrackerService**:
-   Create a script (e.g., `crack.php`):
-   ```php
-   <?php
-   require 'vendor/autoload.php';
-   use PasswordCracker\Services\CrackerService;
-   use PasswordCracker\Services\DatabaseService;
-   use PasswordCracker\Config\AwsConfig;
-   use Monolog\Logger;
-   use Monolog\Handler\StreamHandler;
-
-   $config = new AwsConfig();
-   $logger = new Logger('test');
-   $logger->pushHandler(new StreamHandler('D:\\wamp64\\www\\password-cracker\\logs\\test.log', Logger::INFO));
-   $dbService = new DatabaseService($config, $logger);
-   $crackerService = new CrackerService($dbService, $config, $logger);
-
-   $results = $crackerService->crackPasswords('medium');
-   print_r($results);
-   ?>
-   ```
-   Run:
+1. Update the GitHub repo URL in `main.tf` (`user_data` section).
+2. Ensure your EC2 key pair exists in AWS.
+3. Run:
    ```bash
-   php crack.php
+   terraform init
+   terraform apply -var="key_name=your-key-name"
    ```
 
-3. **View Logs**:
-   Check `D:\wamp64\www\password-cracker\logs\test.log` for results (e.g., `Match found for user_id 2995, password EII9`).
-
-### Generating Hashes
-To generate hashes for new passwords:
-1. Create `generate_hashes.php`:
-   ```php
-   <?php
-   require 'vendor/autoload.php';
-   use PasswordCracker\Config\AwsConfig;
-
-   $config = new AwsConfig();
-   $salt = $config->getSalt();
-   $passwords = ['mmmmmm', 'nnnnnn'];
-
-   echo "Salt: '$salt' (length: " . strlen($salt) . ")\n";
-   foreach ($passwords as $pass) {
-       $input = $pass . $salt;
-       $hash = md5($input);
-       echo "('$pass', '$hash'),\n";
-   }
-   ?>
-   ```
-2. Run:
+4. SSH into EC2:
    ```bash
-   php generate_hashes.php > hashes.txt
+   ssh -i ~/.ssh/your-key-name.pem ec2-user@<public_ip>
    ```
 
-### Running Tests
-1. Clear log:
-   ```bash
-   echo. > D:\wamp64\www\password-cracker\logs\test.log
-   ```
-2. Run tests:
-   ```bash
-   vendor\bin\phpunit tests\CrackerServiceTest.php
-   ```
+5. **Import the Database on EC2**:
+   - After SSHing into the EC2 instance, navigate to the project directory and run:
+     ```bash
+     php scripts/import_database.php --host=localhost --user=root --password='rootpassword' --database=password_cracker --file='data/init.sql'
+     ```
+   - Ensure the `init.sql` file is present in the `data/` directory and the RDS endpoint is correctly configured.
 
-## Architecture
-- **CrackerService**:
-  - Generates MD5 hashes (`generateHash`).
-  - Cracks passwords (`crackPasswords`) using SQL JOIN to match `not_so_smart_users.password` with `password_hashes.hash`.
-  - Logs matches and completion.
-- **DatabaseService**:
-  - Handles MySQL connections and queries (`exec`, `prepare`).
-  - Configured via `AwsConfig` (salt, database credentials).
-- **AwsConfig**:
-  - Provides salt (`ThisIs-A-Salt123`) and database settings.
-- **Logging**:
-  - Monolog writes to `logs/test.log`.
-- **Testing**:
-  - `CrackerServiceTest.php` tests hash generation, cracking, edge cases, and performance.
+## Outputs
 
-## Performance
-- Optimized with SQL JOIN and indexes.
-- Handles 1000 rows in <15s (tested on WAMP, PHP 8.3.6).
-- To profile:
-  ```php
-  $start = microtime(true);
-  $results = $crackerService->crackPasswords('medium');
-  echo "Time: " . (microtime(true) - $start) . "\n";
-  ```
-
-## Troubleshooting
-- **Database Errors**:
-  - Verify `cracker_test` exists and tables are indexed:
-    ```bash
-    mysql -u root -e "USE cracker_test; SHOW TABLES"
-    ```
-  - Test connection:
-    ```php
-    <?php
-    require 'vendor/autoload.php';
-    use PasswordCracker\Services\DatabaseService;
-    use PasswordCracker\Config\AwsConfig;
-    use Monolog\Logger;
-    use Monolog\Handler\StreamHandler;
-
-    $config = new AwsConfig();
-    $logger = new Logger('test');
-    $logger->pushHandler(new StreamHandler('D:\\wamp64\\www\\password-cracker\\logs\\test.log', Logger::INFO));
-    $dbService = new DatabaseService($config, $logger);
-    $dbService->exec('SELECT 1');
-    echo "Connected successfully\n";
-    ?>
-    ```
-- **Test Failures**:
-  - Check `logs/test.log` for query errors.
-  - Ensure `password_hashes` types match (`Easy (Numbers)`, `Medium (Uppercase + Number)`, etc.).
-- **Logging Issues**:
-  - Verify `logs/test.log` is writable.
-  - Clear log:
-    ```bash
-    echo. > D:\wamp64\www\password-cracker\logs\test.log
-    ```
-
-## Contributing
-- Fork the repository.
-- Create a feature branch (`git checkout -b feature/your-feature`).
-- Commit changes (`git commit -m "Add your feature"`).
-- Push to branch (`git push origin feature/your-feature`).
-- Open a pull request.
-
-## License
-MIT License. See `LICENSE` file (if available).
+- EC2 public IP
+- RDS endpoint
+- SSH command for EC2
